@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { CreditsModule } from '../credits/credits.module';
+import { MediaModule } from '../media/media.module';
 import { NovitaModule } from '../novita/novita.module';
 import { SettingsModule } from '../settings/settings.module';
 import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
@@ -11,7 +12,7 @@ import { GenerationService } from './generation.service';
 import { DeviceRateLimitGuard } from '../common/rate-limit.guard';
 
 @Module({
-  imports: [UsersModule, CreditsModule, SubscriptionsModule, SettingsModule, TemplatesModule, TasksModule, NovitaModule],
+  imports: [UsersModule, CreditsModule, SubscriptionsModule, SettingsModule, TemplatesModule, TasksModule, NovitaModule, MediaModule],
   controllers: [GenerationController],
   providers: [GenerationService, DeviceRateLimitGuard],
 })

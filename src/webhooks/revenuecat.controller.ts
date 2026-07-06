@@ -1,22 +1,14 @@
 import { Body, Controller, Headers, HttpCode, Post, UnauthorizedException, BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { ApiTags } from '@nestjs/swagger';
 import { CreditsService } from '../credits/credits.service';
 import { SettingsService } from '../settings/settings.service';
 import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 import { UsersService } from '../users/users.service';
-
-type RevenueCatEvent = {
-  type?: string;
-  app_user_id?: string;
-  product_id?: string;
-  expiration_at_ms?: number;
-  event_timestamp_ms?: number;
-  period_type?: string;
-  entitlement_ids?: string[];
-  original_app_user_id?: string;
-};
+import { RevenueCatWebhookDto } from './revenuecat.dto';
 
 @Controller('api/v1/webhooks/revenuecat')
+@ApiTags('Webhooks')
 export class RevenueCatController {
   constructor(
     private readonly config: ConfigService,
@@ -28,7 +20,7 @@ export class RevenueCatController {
 
   @Post()
   @HttpCode(200)
-  async handle(@Headers('authorization') authorization: string | undefined, @Body() body: { event?: RevenueCatEvent }) {
+  async handle(@Headers('authorization') authorization: string | undefined, @Body() body: RevenueCatWebhookDto) {
     const secret = this.config.get<string>('app.revenueCatWebhookSecret') || '';
     if (secret && authorization !== `Bearer ${secret}`) {
       throw new UnauthorizedException({ error: 'unauthorized' });

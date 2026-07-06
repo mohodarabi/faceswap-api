@@ -11,7 +11,8 @@ NestJS/PostgreSQL rewrite of the original Go backend in `face-swap-backend-main-
 - `GET /api/v1/users/me/credits` - current credit balance by `X-Device-ID`.
 - Category and template CRUD endpoints.
 - RevenueCat webhook handling.
-- `GET /health`, `GET /docs`, and `GET /openapi.yaml`.
+- `GET /health`, `GET /docs`, `GET /openapi.json`, and `GET /openapi.yaml`.
+- Generation endpoints accept `multipart/form-data` uploads. Uploaded media is stored under `uploads/`, and `merge-face` returns an `image_url`.
 
 ## Setup
 
@@ -39,8 +40,10 @@ Optional:
 - `PORT` defaults to `8080`
 - `ENV` defaults to `dev`
 - `MAX_BODY_SIZE` defaults to `20971520`
+- `UPLOAD_DIR` defaults to `<project>/uploads`
+- `PUBLIC_BASE_URL` overrides generated media URLs when the API is behind a proxy/CDN
 - `POSTGRES_SSL=true` for hosted Postgres providers that require SSL
 
 ## Notes
 
-The implementation preserves the current Go source behavior, not every stale route listed in the old README. The canonical routes are the ones mounted in the NestJS controllers.
+Swagger docs are generated from NestJS decorators at startup. The implementation preserves the current Go source behavior, not every stale route listed in the old README. The canonical routes are the ones mounted in the NestJS controllers.

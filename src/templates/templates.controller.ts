@@ -1,9 +1,20 @@
-import { BadRequestException, Body, Controller, Delete, Get, HttpCode, NotFoundException, Param, Patch, Post } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, HttpCode, NotFoundException, Param, Patch, Post, Req, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
+import { Request } from 'express';
+import { MediaService, MemoryFile } from '../media/media.service';
 import { TemplatesService } from './templates.service';
+import { CreateTemplateDto, UpdateTemplateDto } from './templates.dto';
+
+const { memoryStorage } = require('multer') as { memoryStorage: () => unknown };
 
 @Controller('api/v1')
+@ApiTags('Templates')
 export class TemplatesController {
-  constructor(private readonly templates: TemplatesService) {}
+  constructor(
+    private readonly templates: TemplatesService,
+    private readonly media: MediaService,
+  ) {}
 
   @Get('categories/:category_id/templates')
   async list(@Param('category_id') categoryId: string) {
@@ -11,14 +22,26 @@ export class TemplatesController {
   }
 
   @Post('categories/:category_id/templates')
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({ type: CreateTemplateDto })
+  @UseInterceptors(FileInterceptor('preview_file', { storage: memoryStorage(), limits: { fileSize: 50 << 20 } }))
   async create(
     @Param('category_id') categoryId: string,
-    @Body() body: { novita_model_id?: string; preview_url?: string | null; credit_cost?: number },
+    @Body() body: CreateTemplateDto,
+    @UploadedFile() previewFile: MemoryFile,
+    @Req() req: Request,
   ) {
     if (!body.novita_model_id) {
       throw new BadRequestException({ error: 'novita_model_id is required' });
     }
-    return this.templates.create(categoryId, body.novita_model_id, body.preview_url ?? null, body.credit_cost ?? 0);
+
+    if (!previewFile) {
+      throw new BadRequestException({ error: 'file is required' });
+    }
+
+    const storedPreview = await this.media.storeUpload(previewFile, 'templates');
+    const previewUrl = this.media.publicUrl(req, storedPreview.relativePath);
+    return this.templates.create(categoryId, body.novita_model_id, previewUrl, this.toNumber(body.credit_cost, 0));
   }
 
   @Get('templates/:template_id')
@@ -31,9 +54,14 @@ export class TemplatesController {
   }
 
   @Patch('templates/:template_id')
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({ type: UpdateTemplateDto })
+  @UseInterceptors(FileInterceptor('preview_file', { storage: memoryStorage(), limits: { fileSize: 50 << 20 } }))
   async update(
     @Param('template_id') templateId: string,
-    @Body() body: { novita_model_id?: string; preview_url?: string | null; credit_cost?: number },
+    @Body() body: UpdateTemplateDto,
+    @UploadedFile() previewFile: MemoryFile,
+    @Req() req: Request,
   ) {
     const fields: Record<string, unknown> = {};
     if (body.novita_model_id !== undefined) {
@@ -42,8 +70,9 @@ export class TemplatesController {
       }
       fields.novita_model_id = body.novita_model_id;
     }
-    if (body.preview_url !== undefined) {
-      fields.preview_url = body.preview_url;
+    if (previewFile) {
+      const storedPreview = await this.media.storeUpload(previewFile, 'templates');
+      fields.preview_url = this.media.publicUrl(req, storedPreview.relativePath);
     }
     if (body.credit_cost !== undefined) {
       fields.credit_cost = body.credit_cost;
@@ -61,6 +90,22 @@ export class TemplatesController {
   @Delete('templates/:template_id')
   @HttpCode(204)
   async delete(@Param('template_id') templateId: string) {
+    const row = await this.templates.getById(templateId);
+    if (!row) {
+      throw new NotFoundException({ error: 'template not found' });
+    }
     await this.templates.delete(templateId);
+    await this.media.deletePublicUrl(row.preview_url);
+  }
+
+  private toNumber(value: number | string | undefined, fallback: number): number {
+    if (value === undefined || value === '') {
+      return fallback;
+    }
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) {
+      throw new BadRequestException({ error: 'credit_cost must be numeric' });
+    }
+    return parsed;
   }
 }

@@ -6,4 +6,6 @@ export default registerAs('app', () => ({
   novitaApiKey: process.env.NOVITA_API_KEY || '',
   revenueCatWebhookSecret: process.env.REVENUECAT_WEBHOOK_SECRET || '',
   maxBodySize: parseInt(String(process.env.MAX_BODY_SIZE || 20 << 20), 10),
+  uploadDir: process.env.UPLOAD_DIR || `${process.cwd()}/uploads`,
+  publicBaseUrl: process.env.PUBLIC_BASE_URL || '',
 }));

@@ -22,7 +22,6 @@ import { TasksModule } from './tasks/tasks.module';
 import { TemplatesModule } from './templates/templates.module';
 import { UsersModule } from './users/users.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
-import { DocsController } from './docs.controller';
 
 @Module({
   imports: [
@@ -58,6 +57,5 @@ import { DocsController } from './docs.controller';
     WebhooksModule,
     HealthModule,
   ],
-  controllers: [DocsController],
 })
 export class AppModule {}
